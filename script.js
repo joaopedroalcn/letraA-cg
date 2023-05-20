@@ -12,6 +12,16 @@ let translation = [0.0, 0.0];
 
 let selected = false;
 
+let objectColor = [0.0, 1.0, 0.0, 1.0];
+
+let colorIndex = 0;
+let colors = [
+  [1.0, 0.0, 0.0, 1.0], // Vermelho
+  [0.0, 1.0, 0.0, 1.0], // Verde
+  [0.0, 0.0, 1.0, 1.0]  // Azul
+];
+
+
 function main() {
   const canvas = document.getElementById("canvas");
   gl = canvas.getContext("webgl");
@@ -124,7 +134,7 @@ function render() {
   updateModelMatrix();
 
   const uColor = gl.getUniformLocation(shaderProgram, "uColor");
-  gl.uniform4fv(uColor, [1.0, 0.0, 0.0, 1.0]); // Red color
+  gl.uniform4fv(uColor, objectColor);
 
   gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 3);
 
@@ -140,6 +150,21 @@ function handleMouseDown(event) {
   lastMouseX = event.clientX;
   lastMouseY = event.clientY;
   dragging = true;
+
+  // Verificar se o clique ocorreu dentro do triângulo
+  const rect = canvas.getBoundingClientRect();
+  const x = (event.clientX - rect.left) / rect.width * 2 - 1;
+  const y = (event.clientY - rect.top) / rect.height * -2 + 1;
+
+  selected = isPointInTriangle([x, y, 0]);
+
+  if (event.detail === 2) { // Verificar se é um duplo clique
+    // Alternar para a próxima cor na lista de cores
+    colorIndex = (colorIndex + 1) % colors.length;
+  }
+
+  // Definir a cor do objeto com base no estado de seleção e no índice de cor atual
+  objectColor = selected ? colors[colorIndex] : [0.0, 1.0, 0.0, 1.0];
 }
 
 function handleMouseMove(event) {
