@@ -1,24 +1,231 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8" />
-    <title>WebGL Triangle Interaction</title>
+    <title>WebGL Object Transformation</title>
     <style>
-      body {
-        margin: 0;
-      }
-      canvas {
-        display: block;
+      #canvas {
         width: 50vw;
-        height: 50vh;
+        height: 80vh;
+        border: 1px solid black;
       }
     </style>
   </head>
   <body>
     <canvas id="canvas"></canvas>
+    <br />
+    <button id="rotateButton">Rotacionar</button>
+    <button id="translateButton">Transladar</button>
 
-    <script src="/gl-matrix-min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <script type="text/javascript">
+      let gl;
+      let shaderProgram;
+      let vertices = [-0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.0, 0.5, 0.0];
 
-    <script src="/script.js"></script>
+      let rotation = 0.0;
+      let translation = [0.0, 0.0];
+      let objectColor = [0.0, 1.0, 0.0, 1.0];
+
+      let rotateButton = document.getElementById("rotateButton");
+      let translateButton = document.getElementById("translateButton");
+      let canvas = document.getElementById("canvas");
+
+      rotateButton.addEventListener("click", rotateObject);
+      translateButton.addEventListener("mousedown", startTranslation);
+      translateButton.addEventListener("mouseup", stopTranslation);
+      canvas.addEventListener("click", changeColor);
+      canvas.addEventListener("mousemove", translateObject);
+
+      function main() {
+        gl = canvas.getContext("webgl");
+
+        if (!gl) {
+          console.error("WebGL is not supported");
+          return;
+        }
+
+        // Create shaders and program
+        const vertexShaderSource = `
+          attribute vec3 aPosition;
+          uniform mat4 uModelMatrix;
+          void main() {
+              gl_Position = uModelMatrix * vec4(aPosition, 1.0);
+          }
+        `;
+        const fragmentShaderSource = `
+          precision mediump float;
+          uniform vec4 uColor;
+          void main() {
+              gl_FragColor = uColor;
+          }
+        `;
+
+        const vertexShader = createShader(
+          gl,
+          gl.VERTEX_SHADER,
+          vertexShaderSource
+        );
+        const fragmentShader = createShader(
+          gl,
+          gl.FRAGMENT_SHADER,
+          fragmentShaderSource
+        );
+
+        shaderProgram = createProgram(gl, vertexShader, fragmentShader);
+
+        // Set up vertex buffer
+        const vertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          new Float32Array(vertices),
+          gl.STATIC_DRAW
+        );
+
+        const aPosition = gl.getAttribLocation(shaderProgram, "aPosition");
+        gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(aPosition);
+
+        // Set clear color and initial model matrix
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+        // Restante do código...
+
+        // Register mouse event listeners
+        canvas.addEventListener("mousedown", handleMouseDown);
+        canvas.addEventListener("mousemove", handleMouseMove);
+        canvas.addEventListener("mouseup", handleMouseUp);
+
+        // Start rendering
+        render();
+      }
+
+      function createShader(gl, type, source) {
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          console.error(
+            "Shader compilation failed:",
+            gl.getShaderInfoLog(shader)
+          );
+          gl.deleteShader(shader);
+          return null;
+        }
+
+        return shader;
+      }
+
+      function createProgram(gl, vertexShader, fragmentShader) {
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          console.error(
+            "Program linking failed:",
+            gl.getProgramInfoLog(program)
+          );
+          gl.deleteProgram(program);
+          return null;
+        }
+
+        gl.useProgram(program);
+        return program;
+      }
+
+      function updateModelMatrix() {
+        const modelMatrix = mat4.create();
+        mat4.translate(modelMatrix, modelMatrix, [
+          translation[0],
+          translation[1],
+          0.0,
+        ]);
+        mat4.rotateZ(modelMatrix, modelMatrix, rotation);
+
+        const uModelMatrix = gl.getUniformLocation(
+          shaderProgram,
+          "uModelMatrix"
+        );
+        gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix);
+      }
+
+      function render() {
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        updateModelMatrix();
+
+        const uColor = gl.getUniformLocation(shaderProgram, "uColor");
+        gl.uniform4fv(uColor, objectColor);
+
+        gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 3);
+
+        requestAnimationFrame(render);
+      }
+
+      function rotateObject() {
+        rotation += 0.01;
+      }
+
+      function startTranslation() {
+        if (!isTranslating) {
+          canvas.addEventListener("mousedown", handleMouseDown);
+          isTranslating = true;
+        }
+      }
+
+      function handleMouseUp() {
+        canvas.removeEventListener("mousemove", translateObject);
+        dragging = false;
+
+        isTranslating = false;
+      }
+
+      function stopTranslation() {
+        canvas.removeEventListener("mousemove", translateObject);
+      }
+
+      function translateObject(event) {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        translation[0] = (x - canvas.width / 2) / (canvas.width / 2);
+        translation[1] = (canvas.height / 2 - y) / (canvas.height / 2);
+      }
+
+      function changeColor() {
+        objectColor = getRandomColor();
+      }
+
+      function getRandomColor() {
+        return [Math.random(), Math.random(), Math.random(), 1.0];
+      }
+
+      let lastMouseX = 0;
+      let lastMouseY = 0;
+      let dragging = false;
+
+      function handleMouseDown(event) {
+        lastMouseX = event.clientX;
+        lastMouseY = event.clientY;
+        dragging = true;
+      }
+
+      function handleMouseMove(event) {
+        if (dragging) {
+          const deltaX = event.clientX - lastMouseX;
+          const deltaY = event.clientY - lastMouseY;
+          translation[0] += deltaX * 0.01;
+          translation[1] -= deltaY * 0.01;
+          lastMouseX = event.clientX;
+          lastMouseY = event.clientY;
+        }
+      }
+
+      main();
+    </script>
   </body>
 </html>
