@@ -6,6 +6,10 @@ let rotation = 0.0;
 let translation = [0.0, 0.0];
 let objectColor = [0.0, 1.0, 0.0, 1.0];
 
+let lastMouseX = 0;
+let lastMouseY = 0;
+let dragging = false;
+
 let rotateButton = document.getElementById("rotateButton");
 let canvas = document.getElementById("canvas");
 
@@ -18,11 +22,10 @@ function main() {
   gl = canvas.getContext("webgl");
 
   if (!gl) {
-    console.error("WebGL is not supported");
+    console.error("WebGL não é suportado");
     return;
   }
 
-  // Create shaders and program
   const vertexShaderSource = `
     attribute vec3 aPosition;
     uniform mat4 uModelMatrix;
@@ -51,7 +54,6 @@ function main() {
 
   shaderProgram = createProgram(gl, vertexShader, fragmentShader);
 
-  // Set up vertex buffer
   const vertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
   gl.bufferData(
@@ -64,17 +66,14 @@ function main() {
   gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(aPosition);
 
-  // Set clear color and initial model matrix
+
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
-  // Restante do código...
 
-  // Register mouse event listeners
   canvas.addEventListener("mousedown", handleMouseDown);
   canvas.addEventListener("mousemove", handleMouseMove);
   canvas.addEventListener("mouseup", handleMouseUp);
 
-  // Start rendering
   render();
 }
 
@@ -85,7 +84,7 @@ function createShader(gl, type, source) {
 
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
     console.error(
-      "Shader compilation failed:",
+      "Compilação do Shader Falhou:",
       gl.getShaderInfoLog(shader)
     );
     gl.deleteShader(shader);
@@ -103,7 +102,7 @@ function createProgram(gl, vertexShader, fragmentShader) {
 
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
     console.error(
-      "Program linking failed:",
+      "Falha na vinculação do programa:",
       gl.getProgramInfoLog(program)
     );
     gl.deleteProgram(program);
@@ -155,12 +154,14 @@ function handleMouseUp() {
 
 
 function translateObject(event) {
-  const rect = canvas.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
+  if (dragging) {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
 
-  translation[0] = (x - canvas.width / 2) / (canvas.width / 2);
-  translation[1] = (canvas.height / 2 - y) / (canvas.height / 2);
+    translation[0] = (x - canvas.width / 2) / (canvas.width / 2);
+    translation[1] = (canvas.height / 2 - y) / (canvas.height / 2);
+  }
 }
 
 function changeColor() {
@@ -170,10 +171,6 @@ function changeColor() {
 function getRandomColor() {
   return [Math.random(), Math.random(), Math.random(), 1.0];
 }
-
-let lastMouseX = 0;
-let lastMouseY = 0;
-let dragging = false;
 
 function handleMouseDown(event) {
   lastMouseX = event.clientX;
@@ -185,8 +182,8 @@ function handleMouseMove(event) {
   if (dragging) {
     const deltaX = event.clientX - lastMouseX;
     const deltaY = event.clientY - lastMouseY;
-    translation[0] += deltaX * 0.01;
-    translation[1] -= deltaY * 0.01;
+    translation[0] += deltaX * 0.005;
+    translation[1] -= deltaY * 0.005;
     lastMouseX = event.clientX;
     lastMouseY = event.clientY;
   }
