@@ -187,6 +187,9 @@ function handleMouseMove(event) {
     const deltaY = event.clientY - lastMouseY;
     translation[0] += deltaX * 0.005;
     translation[1] -= deltaY * 0.005;
+
+    rotation += deltaX * 0.05;
+
     lastMouseX = event.clientX;
     lastMouseY = event.clientY;
   }
