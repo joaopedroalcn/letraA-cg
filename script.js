@@ -1,6 +1,9 @@
 let gl;
 let shaderProgram;
-let vertices = [-0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.0, 0.5, 0.0];
+let vertices = [
+  -0.5, -0.5, 0.0,
+  0.5, -0.5, 0.0,
+  0.0, 0.5, 0.0];
 
 let rotation = 0.0;
 let translation = [0.0, 0.0];
